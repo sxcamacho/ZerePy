@@ -21,6 +21,7 @@ from src.connections.ethereum_connection import EthereumConnection
 from src.connections.together_connection import TogetherAIConnection
 from src.connections.evm_connection import EVMConnection
 from src.connections.perplexity_connection import PerplexityConnection
+from src.connections.monad_connection import MonadConnection
 from src.middlewares.sonic_middleware import SonicMiddleware
 
 logger = logging.getLogger("connection_manager")
@@ -80,6 +81,8 @@ class ConnectionManager:
             return EVMConnection
         elif class_name == "perplexity":
             return PerplexityConnection
+        elif class_name == "monad":
+            return MonadConnection
         return None
 
     @staticmethod
