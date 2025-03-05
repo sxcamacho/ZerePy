@@ -93,7 +93,12 @@
     },
     {
       "name": "sonic",
-      "network": "mainnet"
+      "network": "testnet",
+      "baibysitter": {
+        "enabled": true,
+        "name": "BaibySitter",
+        "api_url": "https://api.baibysitter.com"
+      }
     },
     {
       "name": "allora",
@@ -112,9 +117,7 @@
     }
   ],
   "tasks": [
-    {"name": "post-tweet", "weight": 1},
-    {"name": "reply-to-tweet", "weight": 1},
-    {"name": "like-tweet", "weight": 1}
+    {"name": "get-sonic-balance", "weight": 1}
   ],
   "use_time_based_weights": false,
   "time_based_multipliers": {
