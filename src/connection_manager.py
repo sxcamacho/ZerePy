@@ -191,14 +191,24 @@ class ConnectionManager:
         self.middleware[connection_name].append(middleware_func)
 
     def perform_action(
-        self, connection_name: str, action_name: str, params: List[Any]
+        self, 
+        connection_name: str, 
+        action_name: str, 
+        params: List[Any],
+        metadata: Dict[str, Any] = None
     ) -> Optional[Any]:
         """Perform an action on a specific connection with given parameters"""
         try:
             # Execute middlewares if they exist
             if connection_name in self.middleware:
                 for middleware_func in self.middleware[connection_name]:
-                    should_continue, modified_params, message = middleware_func(action_name, params)
+                    should_continue, modified_params, message = middleware_func(
+                        action_name, 
+                        {
+                            "args": params,
+                            "metadata": metadata or {}
+                        }
+                    )
                     if not should_continue:
                         logger.info(f"Action {action_name} cancelled by {middleware_func.name}: {message}")
                         return None

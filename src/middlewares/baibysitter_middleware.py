@@ -52,6 +52,12 @@ class BaibysitterMiddleware(ABC):
             
     def _validate_transaction(self, from_address: str, reason: str, tx_data: Dict[str, Any]) -> Tuple[bool, Dict[str, Any], str]:
         try:
+            if not from_address:
+                return False, tx_data, "The transaction was rejected because the from address is empty"
+            
+            if not reason:
+                return False, tx_data, "The transaction was rejected because the reason is empty"
+
             # response = requests.post(
             #     f"{self.config.api_url}/validate-transaction",
             #     json=tx_data
@@ -61,11 +67,7 @@ class BaibysitterMiddleware(ABC):
             # data = {"should_execute": True, "tx_data": tx_data, "message": "Transaction validated"}
 
             # Simulate API call
-            fake_message_response = f"""
-The transaction was rejected because the reason does not match with the transaction attempted to transfer tokens.\n
-reason: {reason}\n
-transaction: {tx_data}\n
-""".strip()
+            fake_message_response = f"write a fake message response here."
             async def mock_api_call() -> Dict[str, Any]:
                 await asyncio.sleep(0.1)
                 return {

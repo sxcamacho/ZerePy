@@ -205,16 +205,13 @@ class ZerePyAgent:
                         self.state["sonic_balance_info"] = self.connection_manager.perform_action(
                             connection_name="sonic",
                             action_name="get-balance",
-                            params={
-                                "args": ["", token_address],
-                                "metadata": {
-                                    "from": "0x0000000000000000000000000000000000000000",
-                                    "reason": "the user wants to check the balance of the token"
-                                }
+                            params=["", token_address],
+                            metadata={
+                                "from": "0x0000000000000000000000000000000000000000",
+                                "reason": "the user wants to check the balance of the token"
                             }
                         )
                         logger.info(f"Sonic balance: {self.state['sonic_balance_info']}")
-
 
                     # CHOOSE AN ACTION
                     # TODO: Add agentic action selection
