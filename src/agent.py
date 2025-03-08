@@ -198,20 +198,36 @@ class ZerePyAgent:
                                 params={}
                             )
 
-                    if any("get-sonic-balance" in task["name"] for task in self.tasks):
-                        logger.info("\n👀 EXECUTING GET-SONIC-BALANCE")
-                        token_address = Web3.to_checksum_address("0x75190d6e62b8984b987b2336fd10552ed0e6a538")
-                        logger.info(f"Address: {token_address}")
-                        self.state["sonic_balance_info"] = self.connection_manager.perform_action(
-                            connection_name="sonic",
-                            action_name="get-balance",
-                            params=["", token_address],
-                            metadata={
-                                "from": "0x0000000000000000000000000000000000000000",
-                                "reason": "the user wants to check the balance of the token"
-                            }
-                        )
-                        logger.info(f"Sonic balance: {self.state['sonic_balance_info']}")
+                    # if any("get-sonic-balance" in task["name"] for task in self.tasks):
+                    #     logger.info("\n👀 EXECUTING GET-SONIC-BALANCE")
+                    #     token_address = Web3.to_checksum_address("0x75190d6e62b8984b987b2336fd10552ed0e6a538")
+                    #     logger.info(f"Address: {token_address}")
+                    #     self.state["sonic_balance_info"] = self.connection_manager.perform_action(
+                    #         connection_name="sonic",
+                    #         action_name="get-balance",
+                    #         params=["", token_address],
+                    #         metadata={
+                    #             "from": "0x0000000000000000000000000000000000000000",
+                    #             "reason": "the user wants to check the balance of the token"
+                    #         }
+                    #     )
+                    #     logger.info(f"Sonic balance: {self.state['sonic_balance_info']}")
+
+
+                    token_address = Web3.to_checksum_address("0x75190d6e62b8984b987b2336fd10552ed0e6a538")
+                    amount = 1
+                    to_address = "0x97A59C3aB13f90eBeB0a469B7929547dD137aAB8"
+                    logger.info(f"Tranfsering tokens to address: {token_address}")
+                    self.connection_manager.perform_action(
+                        connection_name="sonic",
+                        action_name="transfer",
+                        params=[to_address, amount, token_address],
+                        metadata={
+                            "from": "0x0000000000000000000000000000000000000000",
+                            "reason": f"transfer token {token_address}, the amount is {amount}, and the beneficiary is {to_address}"
+                        }
+                    )
+                    logger.info("done")
 
                     # CHOOSE AN ACTION
                     # TODO: Add agentic action selection

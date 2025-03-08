@@ -1,7 +1,8 @@
 import logging
 from typing import Any, Dict, List, Tuple
-from .baibysitter_middleware import BaibysitterMiddleware
-from .baibysitter_middleware import BaibysitterConfig
+from .baibysitter_middleware import BaibysitterMiddleware, BaibysitterConfig
+from web3 import Web3
+from src.connections.sonic_connection import SonicConnection
 
 logger = logging.getLogger("middlewares.sonic")
 
@@ -16,6 +17,9 @@ class SonicMiddleware(BaibysitterMiddleware):
         if not baibysitter_config.get("api_url"):
             raise ValueError("api_url must be configured in the baibysitter configuration")
             
+        # Create SonicConnection instance to reuse its methods
+        self.sonic = SonicConnection(sonic_config)
+            
         super().__init__(BaibysitterConfig(
             api_url=baibysitter_config["api_url"],
             enabled=baibysitter_config.get("enabled", False),
@@ -23,55 +27,46 @@ class SonicMiddleware(BaibysitterMiddleware):
         ))
 
     def should_validate_action(self, action_name: str) -> bool:
-        return action_name in ["transfer", "swap", "get-balance"]
+        return action_name in ["transfer", "swap"]
     
     def _extract_transaction_data(self, action_name: str, params: List[Any]) -> Dict[str, Any]:
-        tx_data = {
-            "action": action_name,
-            "params": params
-        }
-        
         if action_name == "transfer":
-            tx_data.update({
-                "to_address": params[0],
-                "amount": params[1],
-                "token_address": params[2] if len(params) > 2 else None
-            })
+            to_address, amount, token_address = params
+            
+            # Use SonicConnection's contract to encode transfer
+            token_contract = self.sonic._web3.eth.contract(
+                address=Web3.to_checksum_address(token_address),
+                abi=self.sonic.ERC20_ABI
+            )
+            
+            data = token_contract.encodeABI(
+                fn_name="transfer",
+                args=[
+                    Web3.to_checksum_address(to_address),
+                    int(amount)
+                ]
+            )
+            
+            return {
+                "to": Web3.to_checksum_address(token_address),
+                "data": data[2:] if data.startswith('0x') else data,
+                "value": "0"
+            }
+            
         elif action_name == "swap":
-            tx_data.update({
-                "token_in": params[0],
-                "token_out": params[1],
-                "amount": params[2],
-                "slippage": params[3] if len(params) > 3 else 0.5
-            })
-        elif action_name == "get-balance":
-            tx_data.update({
-                "address": params[0],
-                "token_address": params[1] if len(params) > 1 else None
-            })
+            token_in, token_out, amount, slippage = params
             
-        return tx_data
-    
-    def _update_params_with_modified_tx(self, original_params: List[Any], modified_tx: Dict[str, Any]) -> List[Any]:
-        action = modified_tx.get("action")
+            # Use SonicConnection's methods directly
+            route_data = self.sonic._get_swap_route(token_in, token_out, amount)
+            encoded_data = self.sonic._get_encoded_swap_data(
+                route_data["routeSummary"], 
+                slippage=slippage if slippage else 0.5
+            )
+            
+            return {
+                "to": Web3.to_checksum_address(route_data["routerAddress"]),
+                "data": encoded_data[2:] if encoded_data.startswith('0x') else encoded_data,
+                "value": self.sonic._web3.to_wei(amount, 'ether') if token_in.lower() == self.sonic.NATIVE_TOKEN.lower() else "0"
+            }
         
-        if action == "transfer":
-            return [
-                modified_tx.get("to_address", original_params[0]),
-                modified_tx.get("amount", original_params[1]),
-                modified_tx.get("token_address", original_params[2] if len(original_params) > 2 else None)
-            ]
-        elif action == "swap":
-            return [
-                modified_tx.get("token_in", original_params[0]),
-                modified_tx.get("token_out", original_params[1]),
-                modified_tx.get("amount", original_params[2]),
-                modified_tx.get("slippage", original_params[3] if len(original_params) > 3 else 0.5)
-            ]
-        elif action == "get-balance":
-            return [
-                modified_tx.get("address", original_params[0]),
-                modified_tx.get("token_address", original_params[1] if len(original_params) > 1 else None)
-            ]
-            
-        return original_params 
+        return {}

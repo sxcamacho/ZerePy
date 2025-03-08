@@ -438,6 +438,7 @@ class SonicConnection(BaseConnection):
         except Exception as e:
             logger.error(f"Swap failed: {e}")
             raise
+    
     def perform_action(self, action_name: str, kwargs) -> Any:
         """Execute a Sonic action with validation"""
         if action_name not in self.actions:
