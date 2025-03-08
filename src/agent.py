@@ -8,10 +8,12 @@ from dotenv import load_dotenv
 from src.connection_manager import ConnectionManager
 from src.helpers import print_h_bar
 from src.action_handler import execute_action
-import src.actions.twitter_actions  
+import src.actions.twitter_actions
+import src.actions.sonic_actions
 import src.actions.echochamber_actions
 import src.actions.solana_actions
 from datetime import datetime
+from web3 import Web3
 
 REQUIRED_FIELDS = ["name", "bio", "traits", "examples", "loop_delay", "config", "tasks"]
 
@@ -166,9 +168,9 @@ class ZerePyAgent:
         logger.info("Press Ctrl+C at any time to stop the loop.")
         print_h_bar()
 
-        time.sleep(2)
+        time.sleep(1)
         logger.info("Starting loop in 5 seconds...")
-        for i in range(5, 0, -1):
+        for i in range(2, 0, -1):
             logger.info(f"{i}...")
             time.sleep(1)
 
@@ -196,14 +198,47 @@ class ZerePyAgent:
                                 params={}
                             )
 
+                    # if any("get-sonic-balance" in task["name"] for task in self.tasks):
+                    #     logger.info("\n👀 EXECUTING GET-SONIC-BALANCE")
+                    #     token_address = Web3.to_checksum_address("0x75190d6e62b8984b987b2336fd10552ed0e6a538")
+                    #     logger.info(f"Address: {token_address}")
+                    #     self.state["sonic_balance_info"] = self.connection_manager.perform_action(
+                    #         connection_name="sonic",
+                    #         action_name="get-balance",
+                    #         params=["", token_address],
+                    #         metadata={
+                    #             "from": "0x0000000000000000000000000000000000000000",
+                    #             "reason": "the user wants to check the balance of the token"
+                    #         }
+                    #     )
+                    #     logger.info(f"Sonic balance: {self.state['sonic_balance_info']}")
+
+
+                    token_address = Web3.to_checksum_address("0x75190d6e62b8984b987b2336fd10552ed0e6a538")
+                    amount = 1
+                    to_address = "0x97A59C3aB13f90eBeB0a469B7929547dD137aAB8"
+                    logger.info(f"Tranfsering tokens to address: {token_address}")
+                    self.connection_manager.perform_action(
+                        connection_name="sonic",
+                        action_name="transfer",
+                        params=[to_address, amount, token_address],
+                        metadata={
+                            "from": "0x0000000000000000000000000000000000000000",
+                            "reason": f"transfer token {token_address}, the amount is {amount}, and the beneficiary is {to_address}"
+                        }
+                    )
+                    logger.info("done")
+
                     # CHOOSE AN ACTION
                     # TODO: Add agentic action selection
                     
-                    action = self.select_action(use_time_based_weights=self.use_time_based_weights)
-                    action_name = action["name"]
-
+                    # action = self.select_action(use_time_based_weights=self.use_time_based_weights)
+                    # action_name = action["name"]
                     # PERFORM ACTION
-                    success = execute_action(self, action_name)
+                    # print(f"Performing action: {action_name}")
+                    # params = { "token_address": Web3.to_checksum_address("0x75190d6e62b8984b987b2336fd10552ed0e6a538") }
+                    # success = execute_action(self, action_name)
+                    # print(f"Action {action_name} performed: {success}")
 
                     logger.info(f"\n⏳ Waiting {self.loop_delay} seconds before next loop...")
                     print_h_bar()

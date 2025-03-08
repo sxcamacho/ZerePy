@@ -22,6 +22,7 @@ from src.connections.together_connection import TogetherAIConnection
 from src.connections.evm_connection import EVMConnection
 from src.connections.perplexity_connection import PerplexityConnection
 from src.connections.monad_connection import MonadConnection
+from src.middlewares.sonic_middleware import SonicMiddleware
 
 logger = logging.getLogger("connection_manager")
 
@@ -29,8 +30,14 @@ logger = logging.getLogger("connection_manager")
 class ConnectionManager:
     def __init__(self, agent_config):
         self.connections: Dict[str, BaseConnection] = {}
+        self.middleware = {}
         for config in agent_config:
             self._register_connection(config)
+            # Dynamically register middleware if baibysitter is configured
+            if config.get("baibysitter"):
+                middleware_class = self._get_middleware_class(config["name"])
+                if middleware_class:
+                    self.add_middleware(config["name"], middleware_class(agent_config))
 
     @staticmethod
     def _class_name_to_type(class_name: str) -> Type[BaseConnection]:
@@ -78,6 +85,14 @@ class ConnectionManager:
             return MonadConnection
         return None
 
+    @staticmethod
+    def _get_middleware_class(connection_name: str) -> Optional[Type]:
+        middleware_mapping = {
+            "sonic": SonicMiddleware,
+            # Add more middlewares here as needed
+        }
+        return middleware_mapping.get(connection_name)
+    
     def _register_connection(self, config_dic: Dict[str, Any]) -> None:
         """
         Create and register a new connection with configuration
@@ -169,11 +184,36 @@ class ConnectionManager:
         except Exception as e:
             logging.error(f"\nAn error occurred: {e}")
 
+    def add_middleware(self, connection_name: str, middleware_func):
+        """Add a middleware function for a specific connection"""
+        if connection_name not in self.middleware:
+            self.middleware[connection_name] = []
+        self.middleware[connection_name].append(middleware_func)
+
     def perform_action(
-        self, connection_name: str, action_name: str, params: List[Any]
+        self, 
+        connection_name: str, 
+        action_name: str, 
+        params: List[Any],
+        metadata: Dict[str, Any] = None
     ) -> Optional[Any]:
         """Perform an action on a specific connection with given parameters"""
         try:
+            # Execute middlewares if they exist
+            if connection_name in self.middleware:
+                for middleware_func in self.middleware[connection_name]:
+                    should_continue, modified_params, message = middleware_func(
+                        action_name, 
+                        {
+                            "args": params,
+                            "metadata": metadata or {}
+                        }
+                    )
+                    if not should_continue:
+                        logger.info(f"Action {action_name} cancelled by {middleware_func.name}: {message}")
+                        return None
+                    params = modified_params
+
             connection = self.connections[connection_name]
 
             if not connection.is_configured():
@@ -228,3 +268,4 @@ class ConnectionManager:
             for name, conn in self.connections.items()
             if conn.is_configured() and getattr(conn, "is_llm_provider", lambda: False)
         ]
+
